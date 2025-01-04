@@ -45,12 +45,21 @@
             background-color: #1d3557;
         }
 
+        .tabuleiro-container {
+            margin: 20px 0;
+        }
+
+        .tabuleiro-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
         .tabuleiro {
             display: grid;
             grid-template-columns: repeat(5, 60px);
             grid-gap: 8px;
             justify-content: center;
-            margin: 20px auto;
+            margin: 0 auto;
         }
 
         .quadrado {
@@ -115,8 +124,18 @@
 </head>
 <body>
     <h1>HRACK - MINES</h1>
-    <p>Crie seu tabuleiro clicando nos quadrados para alternar entre estrela (⭐) e bomba (💣).</p>
-    <div id="tabuleiro" class="tabuleiro"></div>
+    <p>Configure seus tabuleiros clicando nos quadrados para alternar entre estrela (⭐) e bomba (💣).</p>
+
+    <div class="tabuleiro-container">
+        <div class="tabuleiro-title">Tabuleiro Chave ID</div>
+        <div id="tabuleiroID" class="tabuleiro"></div>
+    </div>
+
+    <div class="tabuleiro-container">
+        <div class="tabuleiro-title">Tabuleiro JSON</div>
+        <div id="tabuleiroJSON" class="tabuleiro"></div>
+    </div>
+
     <button onclick="generateResults()">Gerar Chave ID e JSON</button>
 
     <textarea id="chaveID" rows="2" readonly placeholder="Chave ID gerada aparecerá aqui..."></textarea>
@@ -128,17 +147,19 @@
     </footer>
 
     <script>
-        const tabuleiro = document.getElementById("tabuleiro");
+        const tabuleiroID = document.getElementById("tabuleiroID");
+        const tabuleiroJSON = document.getElementById("tabuleiroJSON");
         const chaveIDOutput = document.getElementById("chaveID");
         const jsonOutput = document.getElementById("jsonOutput");
         const downloadButton = document.getElementById("downloadButton");
 
-        // Inicializa o tabuleiro 5x5 com estrelas
-        const layout = Array(5).fill().map(() => Array(5).fill("⭐"));
+        // Inicializa ambos os tabuleiros como 5x5 de estrelas
+        const layoutID = Array(5).fill().map(() => Array(5).fill("⭐"));
+        const layoutJSON = Array(5).fill().map(() => Array(5).fill("⭐"));
 
-        // Renderiza o tabuleiro na tela
-        function renderTabuleiro() {
-            tabuleiro.innerHTML = ""; // Limpa o tabuleiro anterior
+        // Renderiza um tabuleiro na tela
+        function renderTabuleiro(container, layout) {
+            container.innerHTML = "";
             layout.forEach((row, rowIndex) => {
                 row.forEach((cell, colIndex) => {
                     const quadrado = document.createElement("div");
@@ -147,53 +168,30 @@
 
                     // Alternar estado no clique
                     quadrado.onclick = () => {
-                        if (layout[rowIndex][colIndex] === "⭐") {
-                            layout[rowIndex][colIndex] = "💣";
-                        } else {
-                            layout[rowIndex][colIndex] = "⭐";
-                        }
-                        renderTabuleiro(); // Re-renderiza o tabuleiro
+                        layout[rowIndex][colIndex] = layout[rowIndex][colIndex] === "⭐" ? "💣" : "⭐";
+                        renderTabuleiro(container, layout);
                     };
 
-                    tabuleiro.appendChild(quadrado);
+                    container.appendChild(quadrado);
                 });
             });
         }
 
-        // Gera a chave ID e o JSON com base no layout
+        // Gera a chave ID e o JSON com base nos layouts
         function generateResults() {
             // Gerar chave ID
-            const chaveID = layout
-                .flat()
-                .map(cell => (cell === "⭐" ? "0" : "1"))
-                .join("");
+            const chaveID = layoutID.flat().map(cell => (cell === "⭐" ? "0" : "1")).join("");
 
-            // Verificar se a chave ID existe na API
-            const apiUrl = `https://hrackmines.github.io/Api/v1/${chaveID}.txt`;
-            fetch(apiUrl)
-                .then(response => {
-                    if (response.ok) {
-                        alert("Chave ID já existe. Altere o tabuleiro.");
-                        return;
-                    }
-                    proceedToGenerate(chaveID);
-                })
-                .catch(() => {
-                    proceedToGenerate(chaveID); // Continua caso a chave não exista
-                });
-        }
-
-        // Gera e exibe o JSON
-        function proceedToGenerate(chaveID) {
+            // Gerar JSON
             const json = {};
-            layout.flat().forEach((cell, index) => {
+            layoutJSON.flat().forEach((cell, index) => {
                 json[index + 1] = cell === "💣" ? "true" : "false";
             });
 
             // Exibir resultados
             chaveIDOutput.value = chaveID;
             jsonOutput.value = JSON.stringify(json, null, 2);
-            downloadButton.style.display = "block"; // Exibe o botão de download
+            downloadButton.style.display = "block";
         }
 
         // Faz o download do arquivo
@@ -207,8 +205,9 @@
             link.click();
         }
 
-        // Inicializa o tabuleiro na tela
-        renderTabuleiro();
+        // Inicializa os tabuleiros
+        renderTabuleiro(tabuleiroID, layoutID);
+        renderTabuleiro(tabuleiroJSON, layoutJSON);
     </script>
 </body>
 </html>
