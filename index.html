@@ -1,1 +1,73 @@
-ola
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salvar HTML na Pasta</title>
+</head>
+<body>
+    <h1>Gerar Arquivo HTML</h1>
+    <label for="folderName">Nome da Pasta:</label>
+    <input type="text" id="folderName" placeholder="Digite o nome da pasta" />
+    <br><br>
+    <button onclick="generateFile()">Gerar Arquivo</button>
+
+    <script>
+        function generateFile() {
+            // Obtém o nome da pasta do usuário
+            const folderName = document.getElementById('folderName').value || 'v1';
+            const fileName = 'index.html';
+
+            // Conteúdo do arquivo HTML
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Response</h1>
+    <pre id="response">Loading...</pre>
+
+    <script>
+        const apiUrl = "https://hrackmines.github.io/Api/v1/";
+
+        // Fetch data from the API
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Display data in the pre tag
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('response').textContent = \`Error: \${error.message}\`;
+            });
+    </script>
+</body>
+</html>
+`;
+
+            // Cria um arquivo Blob para download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+
+            // Nome do arquivo e caminho
+            link.download = `${folderName}/${fileName}`;
+
+            // Inicia o download
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            alert(`Arquivo '${fileName}' pronto para salvar na pasta '${folderName}'.`);
+        }
+    </script>
+</body>
+</html>
