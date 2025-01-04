@@ -121,6 +121,7 @@
 
     <textarea id="chaveID" rows="2" readonly placeholder="Chave ID gerada aparecerá aqui..."></textarea>
     <textarea id="jsonOutput" rows="6" readonly placeholder="JSON gerado aparecerá aqui..."></textarea>
+    <button id="downloadButton" style="display: none;" onclick="downloadFile()">Baixar Arquivo</button>
 
     <footer>
         Desenvolvido com 💻 por <a href="#">Seu Nome</a>
@@ -130,6 +131,7 @@
         const tabuleiro = document.getElementById("tabuleiro");
         const chaveIDOutput = document.getElementById("chaveID");
         const jsonOutput = document.getElementById("jsonOutput");
+        const downloadButton = document.getElementById("downloadButton");
 
         // Inicializa o tabuleiro 5x5 com estrelas
         const layout = Array(5).fill().map(() => Array(5).fill("⭐"));
@@ -166,7 +168,23 @@
                 .map(cell => (cell === "⭐" ? "0" : "1"))
                 .join("");
 
-            // Gerar JSON
+            // Verificar se a chave ID existe na API
+            const apiUrl = `https://hrackmines.github.io/Api/v1/${chaveID}.txt`;
+            fetch(apiUrl)
+                .then(response => {
+                    if (response.ok) {
+                        alert("Chave ID já existe. Altere o tabuleiro.");
+                        return;
+                    }
+                    proceedToGenerate(chaveID);
+                })
+                .catch(() => {
+                    proceedToGenerate(chaveID); // Continua caso a chave não exista
+                });
+        }
+
+        // Gera e exibe o JSON
+        function proceedToGenerate(chaveID) {
             const json = {};
             layout.flat().forEach((cell, index) => {
                 json[index + 1] = cell === "💣" ? "true" : "false";
@@ -175,6 +193,18 @@
             // Exibir resultados
             chaveIDOutput.value = chaveID;
             jsonOutput.value = JSON.stringify(json, null, 2);
+            downloadButton.style.display = "block"; // Exibe o botão de download
+        }
+
+        // Faz o download do arquivo
+        function downloadFile() {
+            const chaveID = chaveIDOutput.value;
+            const json = jsonOutput.value;
+            const blob = new Blob([json], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${chaveID}.txt`;
+            link.click();
         }
 
         // Inicializa o tabuleiro na tela
