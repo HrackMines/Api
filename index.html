@@ -1,1 +1,112 @@
-{"⭐":"false","💣":"true"}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Hrack Mines</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sistema Hrack Mines</h1>
+  <div id="status">Iniciando...</div>
+
+  <script>
+    const apiBombasBase = 'https://hrackmines-default-rtdb.firebaseio.com/Api/Mines/';
+    const apiEnvioBase = 'https://hrackmines-default-rtdb.firebaseio.com/Api/HRACK/';
+    const maxVisualizacoes = 100;
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      return res.json();
+    }
+
+    async function sendJson(url, data) {
+      await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    function getRandomQuadrado() {
+      return Math.floor(Math.random() * 25) + 1;
+    }
+
+    async function main() {
+      const status = document.getElementById('status');
+      status.textContent = 'Lendo bombas do servidor...';
+
+      try {
+        // 1. Buscar bombas com chaves N1 a N25
+        const bombas = [];
+        for (let i = 1; i <= 25; i++) {
+          const dados = await fetchJson(`${apiBombasBase}N${i}.json`);
+          if (dados === "true") bombas.push(i);
+        }
+
+        const qtdBombas = bombas.length;
+
+        if (qtdBombas === 0) {
+          status.textContent = 'Nenhuma bomba detectada.';
+          return;
+        }
+
+        status.textContent = `Detectadas ${qtdBombas} bombas. Iniciando simulação...`;
+
+        // 2. Inicializar contadores
+        const visualizacoes = {};
+        for (let i = 1; i <= 25; i++) visualizacoes[i] = 0;
+
+        // 3. Iniciar loop
+        const loop = setInterval(() => {
+          for (let i = 0; i < qtdBombas; i++) {
+            const pos = getRandomQuadrado();
+            visualizacoes[pos]++;
+            status.textContent = `Bomba caiu no quadrado ${pos} (Total: ${visualizacoes[pos]})`;
+          }
+
+          for (let q in visualizacoes) {
+            if (visualizacoes[q] >= maxVisualizacoes) {
+              clearInterval(loop);
+              status.textContent = `Quadrado ${q} atingiu ${maxVisualizacoes}. Enviando dados...`;
+
+              const envios = [];
+              for (const n in visualizacoes) {
+                if (visualizacoes[n] > 0) {
+                  const chave = `N${n}`;
+                  const url = `${apiEnvioBase}${chave}.json`;
+                  const valor = `${visualizacoes[n]}%`;
+                  envios.push(sendJson(url, valor));
+                }
+              }
+
+              Promise.all(envios).then(() => {
+                status.textContent = 'Dados enviados com sucesso.';
+              });
+
+              break;
+            }
+          }
+        }, 100);
+
+      } catch (e) {
+        status.textContent = 'Erro: ' + e.message;
+        console.error(e);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
