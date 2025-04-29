@@ -1,213 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HRACK - MINES</title>
-    <style>
-        /* Estilos gerais */
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1d3557, #457b9d);
-            color: #f1faee;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        h1 {
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-        }
-
-        p {
-            margin: 10px 0;
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 1rem;
-            background-color: #457b9d;
-            color: #f1faee;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #1d3557;
-        }
-
-        .tabuleiro-container {
-            margin: 20px 0;
-        }
-
-        .tabuleiro-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-
-        .tabuleiro {
-            display: grid;
-            grid-template-columns: repeat(5, 60px);
-            grid-gap: 8px;
-            justify-content: center;
-            margin: 0 auto;
-        }
-
-        .quadrado {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            background-color: #f1faee;
-            color: #1d3557;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: transform 0.2s ease, background-color 0.3s ease;
-        }
-
-        .quadrado.bomba {
-            background-color: #e63946;
-            color: #f1faee;
-        }
-
-        .quadrado.estrela {
-            background-color: #a8dadc;
-            color: #1d3557;
-        }
-
-        .quadrado:hover {
-            transform: scale(1.1);
-        }
-
-        #chaveID, #jsonOutput {
-            background: #f1faee;
-            color: #1d3557;
-            border: none;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 1rem;
-            width: 80%;
-            margin: 10px auto;
-            display: block;
-        }
-
-        footer {
-            margin-top: 40px;
-            font-size: 0.9rem;
-            color: #a8dadc;
-        }
-
-        footer a {
-            color: #f1faee;
-            text-decoration: none;
-            border-bottom: 1px solid #f1faee;
-            transition: color 0.3s ease;
-        }
-
-        footer a:hover {
-            color: #e63946;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Hrack Mines</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
 </head>
 <body>
-    <h1>HRACK - MINES</h1>
-    <p>Configure seus tabuleiros clicando nos quadrados para alternar entre estrela (⭐) e bomba (💣).</p>
+  <h1>Sistema Hrack Mines</h1>
+  <div id="status">Iniciando...</div>
 
-    <div class="tabuleiro-container">
-        <div class="tabuleiro-title">Tabuleiro Chave ID</div>
-        <div id="tabuleiroID" class="tabuleiro"></div>
-    </div>
+  <script>
+    const apiBombasBase = 'https://hrackmines-default-rtdb.firebaseio.com/Api/Mines/';
+    const apiEnvioBase = 'https://hrackmines-default-rtdb.firebaseio.com/Api/HRACK/';
+    const maxVisualizacoes = 100;
 
-    <div class="tabuleiro-container">
-        <div class="tabuleiro-title">Tabuleiro JSON</div>
-        <div id="tabuleiroJSON" class="tabuleiro"></div>
-    </div>
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      return res.json();
+    }
 
-    <button onclick="generateResults()">Gerar Chave ID e JSON</button>
+    async function sendJson(url, data) {
+      await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
 
-    <textarea id="chaveID" rows="2" readonly placeholder="Chave ID gerada aparecerá aqui..."></textarea>
-    <textarea id="jsonOutput" rows="6" readonly placeholder="JSON gerado aparecerá aqui..."></textarea>
-    <button id="downloadButton" style="display: none;" onclick="downloadFile()">Baixar Arquivo</button>
+    function getRandomQuadrado() {
+      return Math.floor(Math.random() * 25) + 1;
+    }
 
-    <footer>
-        Desenvolvido com 💻 por <a href="#">Seu Nome</a>
-    </footer>
+    async function main() {
+      const status = document.getElementById('status');
+      status.textContent = 'Lendo bombas do servidor...';
 
-    <script>
-        const tabuleiroID = document.getElementById("tabuleiroID");
-        const tabuleiroJSON = document.getElementById("tabuleiroJSON");
-        const chaveIDOutput = document.getElementById("chaveID");
-        const jsonOutput = document.getElementById("jsonOutput");
-        const downloadButton = document.getElementById("downloadButton");
-
-        // Inicializa ambos os tabuleiros como 5x5 de estrelas
-        const layoutID = Array(5).fill().map(() => Array(5).fill("⭐"));
-        const layoutJSON = Array(5).fill().map(() => Array(5).fill("⭐"));
-
-        // Renderiza um tabuleiro na tela
-        function renderTabuleiro(container, layout) {
-            container.innerHTML = "";
-            layout.forEach((row, rowIndex) => {
-                row.forEach((cell, colIndex) => {
-                    const quadrado = document.createElement("div");
-                    quadrado.className = `quadrado ${cell === "💣" ? "bomba" : "estrela"}`;
-                    quadrado.textContent = cell;
-
-                    // Alternar estado no clique
-                    quadrado.onclick = () => {
-                        layout[rowIndex][colIndex] = layout[rowIndex][colIndex] === "⭐" ? "💣" : "⭐";
-                        renderTabuleiro(container, layout);
-                    };
-
-                    container.appendChild(quadrado);
-                });
-            });
+      try {
+        // 1. Buscar bombas com chaves N1 a N25
+        const bombas = [];
+        for (let i = 1; i <= 25; i++) {
+          const dados = await fetchJson(`${apiBombasBase}N${i}.json`);
+          if (dados === "true") bombas.push(i);
         }
 
-        // Gera a chave ID e o JSON com base nos layouts
-        function generateResults() {
-            // Gerar chave ID
-            const chaveID = layoutID.flat().map(cell => (cell === "⭐" ? "0" : "1")).join("");
+        const qtdBombas = bombas.length;
 
-            // Gerar JSON
-            const json = {};
-            layoutJSON.flat().forEach((cell, index) => {
-                json[index + 1] = cell === "💣" ? "true" : "false";
-            });
-
-            // Exibir resultados
-            chaveIDOutput.value = chaveID;
-            jsonOutput.value = JSON.stringify(json, null, 2);
-            downloadButton.style.display = "block";
+        if (qtdBombas === 0) {
+          status.textContent = 'Nenhuma bomba detectada.';
+          return;
         }
 
-        // Faz o download do arquivo
-        function downloadFile() {
-            const chaveID = chaveIDOutput.value;
-            const json = jsonOutput.value;
-            const blob = new Blob([json], { type: "text/plain" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `${chaveID}.txt`;
-            link.click();
-        }
+        status.textContent = `Detectadas ${qtdBombas} bombas. Iniciando simulação...`;
 
-        // Inicializa os tabuleiros
-        renderTabuleiro(tabuleiroID, layoutID);
-        renderTabuleiro(tabuleiroJSON, layoutJSON);
-    </script>
+        // 2. Inicializar contadores
+        const visualizacoes = {};
+        for (let i = 1; i <= 25; i++) visualizacoes[i] = 0;
+
+        // 3. Iniciar loop
+        const loop = setInterval(() => {
+          for (let i = 0; i < qtdBombas; i++) {
+            const pos = getRandomQuadrado();
+            visualizacoes[pos]++;
+            status.textContent = `Bomba caiu no quadrado ${pos} (Total: ${visualizacoes[pos]})`;
+          }
+
+          for (let q in visualizacoes) {
+            if (visualizacoes[q] >= maxVisualizacoes) {
+              clearInterval(loop);
+              status.textContent = `Quadrado ${q} atingiu ${maxVisualizacoes}. Enviando dados...`;
+
+              const envios = [];
+              for (const n in visualizacoes) {
+                if (visualizacoes[n] > 0) {
+                  const chave = `N${n}`;
+                  const url = `${apiEnvioBase}${chave}.json`;
+                  const valor = `${visualizacoes[n]}%`;
+                  envios.push(sendJson(url, valor));
+                }
+              }
+
+              Promise.all(envios).then(() => {
+                status.textContent = 'Dados enviados com sucesso.';
+              });
+
+              break;
+            }
+          }
+        }, 100);
+
+      } catch (e) {
+        status.textContent = 'Erro: ' + e.message;
+        console.error(e);
+      }
+    }
+
+    main();
+  </script>
 </body>
 </html>
